@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Leaderboard Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(180deg, #e6f0fa, #ffffff);
+            color: #1a1a1a;
+            transition: background 0.3s, color 0.3s;
+            overflow-x: hidden;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(180deg, #2a2a2a, #1a1a1a);
+            color: #e6e6e6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #4a90e2, #50c9c3);
+            color: white;
+            border-radius: 0 0 30px 30px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://source.unsplash.com/random/1400x500/?leaderboard') no-repeat center/cover;
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        header h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3.5em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        header .subtitle {
+            font-size: 1.3em;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+            font-size: 1.8em;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 50%;
+            transition: background 0.3s;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            flex-wrap: wrap;
+        }
+
+        body.dark-mode .tabs {
+            background: #2c2c2c;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-link {
+            padding: 15px 40px;
+            text-decoration: none;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 10px;
+            margin: 5px;
+        }
+
+        body.dark-mode .tab-link {
+            color: #e6e6e6;
+        }
+
+        .tab-link.active {
+            background: #4a90e2;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab-link:hover {
+            background: #e0e7ff;
+        }
+
+        body.dark-mode .tab-link:hover {
+            background: #3a3a3a;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s, transform 0.3s;
+        }
+
+        body.dark-mode .tab-content {
+            background: #2c2c2c;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tab-content h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #4a90e2;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a90e2;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        .score-input {
+            width: 80px;
+            padding: 8px;
+            margin-right: 5px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: linear-gradient(45deg, #4a90e2, #50c9c3);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(74, 144, 226, 0.8);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+
+        .message {
+            margin-top: 10px;
+            font-size: 1em;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .message.success {
+            background: #dff0d8;
+            color: #3c763d;
+        }
+
+        .message.error {
+            background: #f2dede;
+            color: #a94442;
+        }
+
+        body.dark-mode .message.success {
+            background: #3c763d;
+            color: #dff0d8;
+        }
+
+        body.dark-mode .message.error {
+            background: #a94442;
+            color: #f2dede;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode table {
+            background: #3a3a3a;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        body.dark-mode th, body.dark-mode td {
+            border-bottom: 1px solid #444;
+        }
+
+        th {
+            background: #4a90e2;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        tr:hover {
+            background: #e6f0fa;
+        }
+
+        body.dark-mode tr:hover {
+            background: #444;
+        }
+
+        .rank-1 { background: linear-gradient(45deg, #ffd700, #ffed4e) !important; font-weight: bold; }
+        .rank-2 { background: linear-gradient(45deg, #c0c0c0, #e0e0e0) !important; font-weight: bold; }
+        .rank-3 { background: linear-gradient(45deg, #cd7f32, #deb887) !important; font-weight: bold; }
+
+        .search-filter {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-filter input, .search-filter select {
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            flex: 1;
+        }
+
+        #scoreChart {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stat-item {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        body.dark-mode .stat-item {
+            background: #3a3a3a;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            color: #4a90e2;
+            font-weight: bold;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background: #fff;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .code-block {
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        body.dark-mode .modal-content {
+            background-color: #333;
+            color: #e6e6e6;
+        }
+
+        body.dark-mode .code-block {
+            background-color: #222;
+            border-color: #444;
+        }
+        
+        /* Hidden container for image generation */
+        #photo-container {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            width: 500px;
+            background: linear-gradient(135deg, #4a90e2, #50c9c3);
+            border: 10px solid #ffd700;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            font-family: 'Montserrat', sans-serif;
+            color: #fff;
+            text-align: center;
+        }
+
+        #photo-container h2 {
+            font-size: 2.5em;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px #000;
+            font-weight: bold;
+        }
+
+        #photo-leaderboard-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        
+        #photo-leaderboard-list li {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        #photo-leaderboard-list .rank {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-right: 15px;
+            width: 40px;
+            text-align: center;
+        }
+
+        #photo-leaderboard-list .name {
+            flex-grow: 1;
+        }
+        
+        #photo-leaderboard-list .score {
+            font-weight: bold;
+            color: #fff;
+        }
+
+        #photo-leaderboard-list li.rank-1 { background: rgba(255, 215, 0, 0.3) !important; color: white !important; }
+        #photo-leaderboard-list li.rank-2 { background: rgba(192, 192, 192, 0.3) !important; color: white !important; }
+        #photo-leaderboard-list li.rank-3 { background: rgba(205, 127, 50, 0.3) !important; color: white !important; }
+
+        @media (max-width: 768px) {
+            header h1 { font-size: 2.5em; }
+            .tabs { flex-direction: column; }
+            .tab-link { width: 100%; margin: 5px 0; }
+            .search-filter { flex-direction: column; }
+            .search-filter input, .search-filter select { width: 100%; }
+            table { font-size: 0.9em; }
+            .stats { flex-direction: column; gap: 10px; }
+            .stat-item { margin: 5px 0; }
+            .score-input { width: 60px; }
+        }
+
+        @media (max-width: 480px) {
+            header { padding: 40px 10px; }
+            .container { padding: 10px; }
+            .tab-content { padding: 20px; }
+            .btn { padding: 10px 20px; }
+            .score-input { width: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mode-toggle" onclick="toggleMode()">🌙</div>
+
+    <header>
+        <h1>Quiz Leaderboard Manager</h1>
+        <p class="subtitle">Professional Tool for Managing Student Rankings and Scores</p>
+    </header>
+
+    <div class="tabs">
+        <div class="tab-link active" data-tab="students">Manage Students</div>
+        <div class="tab-link" data-tab="marks">Add Marks</div>
+        <div class="tab-link" data-tab="leaderboard">Leaderboard</div>
+    </div>
+
+    <div class="container">
+        <div id="students" class="tab-content active">
+            <h2>Student Management (Max 300)</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalStudents">0</div>
+                    <div>Total Students</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="avgScore">0</div>
+                    <div>Average Score</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="name">Student Name:</label>
+                <input type="text" id="name" placeholder="Enter student name" required>
+                <label for="symbol">Symbol Number:</label>
+                <input type="text" id="symbol" placeholder="Enter symbol number" required>
+                <button id="addStudentBtn" class="btn">Add Student</button>
+            </div>
+            <p id="studentMessage" class="message"></p>
+            <table id="studentsTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Total Score</th>
+                        <th>Add Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="marks" class="tab-content">
+            <h2>Add Quiz Marks</h2>
+            <div class="form-group">
+                <label for="markSymbol">Symbol Number:</label>
+                <input type="text" id="markSymbol" placeholder="Enter symbol number" required>
+                <label for="markScore">Score (out of 100):</label>
+                <input type="number" id="markScore" min="0" max="100" placeholder="Enter score" required>
+                <button id="addMarkBtn" class="btn">Add Score</button>
+            </div>
+            <p id="markMessage" class="message"></p>
+        </div>
+
+        <div id="leaderboard" class="tab-content">
+            <h2>Student Leaderboard</h2>
+            <div class="search-filter">
+                <input type="text" id="searchName" placeholder="Search by Name">
+                <input type="text" id="searchSymbol" placeholder="Search by Symbol">
+                <select id="rankFilter">
+                    <option value="">All Ranks</option>
+                    <option value="top10">Top 10</option>
+                    <option value="top50">Top 50</option>
+                </select>
+                <button id="filterBtn" class="btn btn-secondary">Filter</button>
+            </div>
+            <canvas id="scoreChart"></canvas>
+            <table id="leaderboardTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Name</th>
+                        <th>Symbol</th>
+                        <th>Total Score</th>
+                        <th>Average Quiz Score</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <button id="exportBtn" class="btn" style="margin-top: 20px;">Export to CSV</button>
+            <button id="exportPhotoBtn" class="btn" style="margin-top: 20px;">Export Photo</button>
+            <button id="getCodeBtn" class="btn" style="margin-top: 20px;">Get Code</button>
+        </div>
+    </div>
+
+    <div id="codeModal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>Generated Leaderboard Code</h2>
+        <pre id="leaderboardCode" class="code-block"></pre>
+        <button id="copyCodeBtn" class="btn" style="margin-top: 15px;">Copy to Clipboard</button>
+      </div>
+    </div>
+    
+    <div id="photo-container">
+        <h2>Top 10 Quiz Champions 🏆</h2>
+        <ul id="photo-leaderboard-list"></ul>
+    </div>
+
+    <script>
+        // Data Management
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+
+        function saveData() {
+            localStorage.setItem('students', JSON.stringify(students));
+        }
+
+        function showMessage(elementId, message, type) {
+            const messageElement = document.getElementById(elementId);
+            messageElement.textContent = message;
+            messageElement.className = `message ${type}`;
+            setTimeout(() => { messageElement.textContent = ''; messageElement.className = 'message'; }, 3000);
+        }
+
+        function addStudent(name, symbol) {
+            if (students.length >= 300) {
+                showMessage('studentMessage', 'Maximum 300 students reached!', 'error');
+                return false;
+            }
+            if (!name.trim() || !symbol.trim()) {
+                showMessage('studentMessage', 'Name and symbol number cannot be empty!', 'error');
+                return false;
+            }
+            if (students.find(s => s.symbol.toLowerCase() === symbol.trim().toLowerCase())) {
+                showMessage('studentMessage', 'Symbol number already exists!', 'error');
+                return false;
+            }
+            students.push({ name: name.trim(), symbol: symbol.trim(), scores: [], totalScore: 0, quizzes: 0 });
+            saveData();
+            renderStudents();
+            updateStats();
+            showMessage('studentMessage', 'Student added successfully!', 'success');
+            return true;
+        }
+
+        function addMark(symbol, score) {
+            if (isNaN(score) || score < 0 || score > 100) {
+                return 'Score must be between 0 and 100!';
+            }
+            const student = students.find(s => s.symbol.toLowerCase() === symbol.trim().toLowerCase());
+            if (!student) {
+                return 'Student not found!';
+            }
+            student.scores.push(score);
+            student.totalScore += score;
+            student.quizzes++;
+            saveData();
+            renderStudents();
+            renderLeaderboard();
+            updateStats();
+            return 'Score added successfully!';
+        }
+
+        function removeStudent(index) {
+            if (confirm('Are you sure you want to remove this student?')) {
+                students.splice(index, 1);
+                saveData();
+                renderStudents();
+                renderLeaderboard();
+                updateStats();
+                showMessage('studentMessage', 'Student removed successfully!', 'success');
+            }
+        }
+
+        function renderStudents() {
+            const tbody = document.querySelector('#studentsTable tbody');
+            tbody.innerHTML = '';
+            students.forEach((student, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.symbol}</td>
+                    <td>${student.totalScore}</td>
+                    <td>
+                        <input type="number" class="score-input" data-symbol="${student.symbol}" min="0" max="100" placeholder="Score">
+                        <button class="btn btn-secondary add-score-btn" data-symbol="${student.symbol}" style="padding: 5px 10px; font-size: 0.8em;">Add</button>
+                    </td>
+                    <td><button class="btn btn-secondary remove-btn" data-index="${index}" style="padding: 5px 10px; font-size: 0.8em;">Remove</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+            // Attach event listeners to buttons
+            document.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', () => removeStudent(parseInt(btn.dataset.index)));
+            });
+            document.querySelectorAll('.add-score-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const symbol = btn.dataset.symbol;
+                    const input = btn.previousElementSibling;
+                    const score = parseInt(input.value);
+                    const message = addMark(symbol, score);
+                    showMessage('studentMessage', message, message.includes('successfully') ? 'success' : 'error');
+                    if (message.includes('successfully')) {
+                        input.value = '';
+                    }
+                });
+            });
+        }
+
+        function renderLeaderboard(filteredStudents = students) {
+            const sorted = [...filteredStudents].sort((a, b) => b.totalScore - a.totalScore || a.name.localeCompare(b.name));
+            const tbody = document.querySelector('#leaderboardTable tbody');
+            tbody.innerHTML = '';
+            sorted.forEach((student, index) => {
+                const row = document.createElement('tr');
+                const rankClass = index < 3 ? `rank-${index + 1}` : '';
+                const avgScore = student.quizzes > 0 ? (student.totalScore / student.quizzes).toFixed(1) : 0;
+                row.className = rankClass;
+                row.innerHTML = `
+                    <td>${index + 1} ${index < 3 ? ['🏆', '🥈', '🥉'][index] : ''}</td>
+                    <td>${student.name}</td>
+                    <td>${student.symbol}</td>
+                    <td>${student.totalScore}</td>
+                    <td>${avgScore}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Render Chart
+            const top10 = sorted.slice(0, 10);
+            const ctx = document.getElementById('scoreChart').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: top10.map(s => s.symbol),
+                    datasets: [{
+                        label: 'Total Score',
+                        data: top10.map(s => s.totalScore),
+                        backgroundColor: 'rgba(74, 144, 226, 0.6)',
+                        borderColor: 'rgba(74, 144, 226, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('totalStudents').textContent = students.length;
+            const avg = students.reduce((sum, s) => sum + (s.quizzes > 0 ? s.totalScore / s.quizzes : 0), 0) / (students.length || 1);
+            document.getElementById('avgScore').textContent = avg.toFixed(1);
+        }
+
+        function filterLeaderboard() {
+            const name = document.getElementById('searchName').value.toLowerCase();
+            const symbol = document.getElementById('searchSymbol').value.toLowerCase();
+            const rankFilter = document.getElementById('rankFilter').value;
+            let filtered = students.filter(s =>
+                (!name || s.name.toLowerCase().includes(name)) &&
+                (!symbol || s.symbol.toLowerCase().includes(symbol))
+            );
+            const sorted = [...filtered].sort((a, b) => b.totalScore - a.totalScore || a.name.localeCompare(b.name));
+            if (rankFilter === 'top10') filtered = sorted.slice(0, 10);
+            else if (rankFilter === 'top50') filtered = sorted.slice(0, 50);
+            renderLeaderboard(filtered);
+        }
+
+        function exportCSV() {
+            const sorted = [...students].sort((a, b) => b.totalScore - a.totalScore || a.name.localeCompare(b.name));
+            let csv = 'Rank,Name,Symbol,Total Score,Average Score\n';
+            sorted.forEach((s, i) => {
+                const avg = s.quizzes > 0 ? (s.totalScore / s.quizzes).toFixed(1) : 0;
+                csv += `${i+1},${s.name},${s.symbol},${s.totalScore},${avg}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'leaderboard.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function generateLeaderboardCode() {
+            const sorted = [...students].sort((a, b) => b.totalScore - a.totalScore || a.name.localeCompare(b.name));
+            let code = '';
+            sorted.forEach((student, index) => {
+                const rankText = index < 3 ? `${index + 1} ${['🏆', '🥈', '🥉'][index]}` : `${index + 1}`;
+                code += `\n<tr data-symbol="${student.symbol}"><td>${rankText}</td><td>${student.name}</td><td>${student.symbol}</td><td>${student.totalScore}</td></tr>`;
+            });
+            return code;
+        }
+
+        function showCodeModal() {
+            const code = generateLeaderboardCode();
+            document.getElementById('leaderboardCode').textContent = code;
+            document.getElementById('codeModal').style.display = 'block';
+        }
+
+        function copyCode() {
+            const code = document.getElementById('leaderboardCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+        
+        function exportPhoto() {
+            const sortedTop10 = [...students].sort((a, b) => b.totalScore - a.totalScore).slice(0, 10);
+            const list = document.getElementById('photo-leaderboard-list');
+            list.innerHTML = '';
+            
+            sortedTop10.forEach((student, index) => {
+                const listItem = document.createElement('li');
+                const rankClass = index < 3 ? `rank-${index + 1}` : '';
+                listItem.className = rankClass;
+                
+                const rankSymbol = index < 3 ? ['🏆', '🥈', '🥉'][index] : index + 1;
+                listItem.innerHTML = `
+                    <span class="rank">${rankSymbol}</span>
+                    <span class="name">${student.name}</span>
+                    <span class="score">${student.totalScore}</span>
+                `;
+                list.appendChild(listItem);
+            });
+            
+            const photoContainer = document.getElementById('photo-container');
+            
+            html2canvas(photoContainer, { 
+                scale: 2,
+                backgroundColor: null 
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'top-10-quiz-champions.png';
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            // Tab switching
+            document.querySelectorAll('.tab-link').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                    tab.classList.add('active');
+                    if (tab.dataset.tab === 'leaderboard') renderLeaderboard();
+                    if (tab.dataset.tab === 'students') renderStudents();
+                });
+            });
+
+            // Add Student
+            document.getElementById('addStudentBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('name').value;
+                const symbol = document.getElementById('symbol').value;
+                if (addStudent(name, symbol)) {
+                    document.getElementById('name').value = '';
+                    document.getElementById('symbol').value = '';
+                }
+            });
+
+            // Add Mark
+            document.getElementById('addMarkBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                const symbol = document.getElementById('markSymbol').value;
+                const score = parseInt(document.getElementById('markScore').value);
+                const message = addMark(symbol, score);
+                showMessage('markMessage', message, message.includes('successfully') ? 'success' : 'error');
+                if (message.includes('successfully')) {
+                    document.getElementById('markSymbol').value = '';
+                    document.getElementById('markScore').value = '';
+                }
+            });
+
+            // Filter Leaderboard
+            document.getElementById('filterBtn').addEventListener('click', filterLeaderboard);
+            document.getElementById('searchName').addEventListener('input', filterLeaderboard);
+            document.getElementById('searchSymbol').addEventListener('input', filterLeaderboard);
+            document.getElementById('rankFilter').addEventListener('change', filterLeaderboard);
+
+            // Export CSV
+            document.getElementById('exportBtn').addEventListener('click', exportCSV);
+            
+            // Export Photo Button
+            document.getElementById('exportPhotoBtn').addEventListener('click', exportPhoto);
+            
+            // Get Code Button
+            document.getElementById('getCodeBtn').addEventListener('click', showCodeModal);
+
+            // Copy Code Button
+            document.getElementById('copyCodeBtn').addEventListener('click', copyCode);
+
+            // Close Modal
+            document.querySelector('.close-btn').addEventListener('click', () => {
+                document.getElementById('codeModal').style.display = 'none';
+            });
+            window.addEventListener('click', (event) => {
+                if (event.target == document.getElementById('codeModal')) {
+                    document.getElementById('codeModal').style.display = 'none';
+                }
+            });
+        }
+
+        // Dark Mode
+        function toggleMode() {
+            document.body.classList.toggle('dark-mode');
+            document.querySelector('.mode-toggle').textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            renderStudents();
+            renderLeaderboard();
+            updateStats();
+        });
+    </script>
+</body>
+</html>
